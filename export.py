@@ -31,14 +31,18 @@ try:
         word = word.lower()
         translate = lingualeo.get_translates(word)
 
-        is_exists = cache_get('is_exists.cache.json', word)
 
+        is_exists = cache_get('is_exists.cache.pickle', word)
+
+        if translate is None:
+            print 'not found', word
+            continue
         if is_exists:
             print 'Detect exists:', word
             continue
         lingualeo.add_word(translate["word"], translate["tword"], translate['id'])
 
-        cache_set('is_exists.cache.json', word, True)
+        cache_set('is_exists.cache.pickle', word, True)
 
         if translate["is_exist"]:
             result = "Add word: "

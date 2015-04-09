@@ -29,8 +29,8 @@ class Text(Base):
         f = open(self.source)
         lines = f.readlines()
         self.data = []
-        #rx = r'[^\A\pL+\z]+'
-        rx = r'[\s,\.:;“”\?]+'
+        rx = r'[^A-Za-z\']+'
+        #rx = r'[\s,\.:;“”\?]+'
         for l in lines:
             self.data +=  [w for w in re.split(rx, l) if len(w)]
         f.close()
