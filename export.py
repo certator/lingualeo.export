@@ -4,6 +4,9 @@ import word
 import config
 import service
 import sys
+import traceback
+
+from service import cache_get, cache_set
 
 email = config.auth.get('email')
 password = config.auth.get('password')
@@ -20,22 +23,34 @@ try:
     handler.read()
 
     lingualeo = service.Lingualeo(email, password)
+    print 'auth ... ',
     lingualeo.auth()
+    print 'ok'
 
     for word in handler.get():
         word = word.lower()
         translate = lingualeo.get_translates(word)
 
-        lingualeo.add_word(translate["word"], translate["tword"])
+        is_exists = cache_get('is_exists.cache.json', word)
+
+        if is_exists:
+            print 'Detect exists:', word
+            continue
+        lingualeo.add_word(translate["word"], translate["tword"], translate['id'])
+
+        cache_set('is_exists.cache.json', word, True)
 
         if translate["is_exist"]:
             result = "Add word: "
         else:
             result = "Already exists: "
 
+        if translate["is_cached"]:
+            result = '[cached] ' + result
+
         result = result + word
-        print result
+        print result, translate['id']
 
 
-except Exception as e:
-    print e.args, e.message
+except:
+    print traceback.format_exc()

@@ -1,4 +1,5 @@
-import sqlite3
+# -*- coding: utf-8 -*-
+import sqlite3, re
 
 
 class Base(object):
@@ -26,5 +27,10 @@ class Kindle(Base):
 class Text(Base):
     def read(self):
         f = open(self.source)
-        self.data = f.readlines()
+        lines = f.readlines()
+        self.data = []
+        #rx = r'[^\A\pL+\z]+'
+        rx = r'[\s,\.:;“”\?]+'
+        for l in lines:
+            self.data +=  [w for w in re.split(rx, l) if len(w)]
         f.close()
