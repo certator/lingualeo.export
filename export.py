@@ -10,6 +10,7 @@ from service import cache_get, cache_set
 
 email = config.auth.get('email')
 password = config.auth.get('password')
+groupId = config.sources.get('groupId')
 
 try:
     export_type = sys.argv[1]
@@ -29,9 +30,9 @@ try:
 
     for word in handler.get():
         word = word.lower()
-        translate = lingualeo.get_translates(word)
+        leo_word, translate = lingualeo.get_translates(word)
 
-
+        
         is_exists = cache_get('is_exists.cache.pickle', word)
 
         if translate is None:
@@ -40,7 +41,9 @@ try:
         if is_exists:
             print 'Detect exists:', word
             continue
-        lingualeo.add_word(translate["word"], translate["tword"], translate['id'])
+        lingualeo.add_word(
+            translate["word"], translate["tword"], translate['word_id'], translate['translate_id'], 
+            translate['speech_part_id'], groupId=groupId)
 
         cache_set('is_exists.cache.pickle', word, True)
 
@@ -53,7 +56,8 @@ try:
             result = '[cached] ' + result
 
         result = result + word
-        print result, translate['id']
+
+        print result, translate['translate_id']
 
 
 except:
