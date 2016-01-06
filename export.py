@@ -12,24 +12,33 @@ email = config.auth.get('email')
 password = config.auth.get('password')
 groupId = config.sources.get('groupId')
 
-try:
-    export_type = sys.argv[1]
-    if export_type == 'text':
-        handler = word.Text(config.sources.get('text'))
-    elif export_type == 'kindle':
-        handler = word.Kindle(config.sources.get('kindle'))
-    else:
-        raise Exception('unsupported type')
 
-    handler.read()
+export_type = sys.argv[1]
+if export_type == 'text':
+    handler = word.Text(config.sources.get('text'))
+elif export_type == 'kindle':
+    handler = word.Kindle(config.sources.get('kindle'))
+else:
+    raise Exception('unsupported type')
 
-    lingualeo = service.Lingualeo(email, password)
-    print 'auth ... ',
-    lingualeo.auth()
-    print 'ok'
+handler.read()
 
-    for word in handler.get():
-        word = word.lower()
+lingualeo = service.Lingualeo(email, password)
+print 'auth ... ',
+lingualeo.auth()
+print 'ok'
+
+words = list(handler.get())
+
+i = 0
+
+for word in words:
+    word = word.lower()
+    i += 1
+
+    print i, 'of', len(words), ':',
+
+    try:
         leo_word, translate = lingualeo.get_translates(word)
 
         
@@ -57,8 +66,9 @@ try:
 
         result = result + word
 
-        print result, translate['translate_id']
+        print result, translate['translate_id'], 
 
-
-except:
-    print traceback.format_exc()
+    except KeyboardInterrupt:
+        break;
+    except:
+        print word, traceback.format_exc()

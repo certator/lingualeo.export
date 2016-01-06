@@ -35,11 +35,18 @@ def turn_on_requests_debugging():
 
 #turn_on_requests_debugging()
 
+class LoadedCache:
+    caches = {}
+
 def cache_get(fname, key):
     if not os.path.exists(fname):
         return None
+    #if fname in LoadedCache.caches:
+    #    if key in LoadedCache.caches[fname]:
+    #        return LoadedCache.caches[fname][key]
     with codecs.open(fname, 'r', ) as f:
         cache = pickle.load(f)
+        LoadedCache.caches[fname] = cache
     return cache.get(key, None)
 
 def cache_set(fname, key, value):
@@ -139,6 +146,10 @@ class Lingualeo:
             #print result, [word]
             cache_set('gettranslates.cache.pickle', word, result)
         #print result
+
+        if result['error_msg'] != '':
+            raise Exception(result['error_msg'])
+
         translates = sorted(result["userdict3"]['translations'], key=lambda i: -i['translate_votes'])
         if len(translates) == 0:
             return result, None
