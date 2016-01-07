@@ -28,7 +28,7 @@ print 'auth ... ',
 lingualeo.auth()
 print 'ok'
 
-words = list(handler.get())
+words = list(set(handler.get()))
 
 i = 0
 
@@ -37,6 +37,9 @@ for word in words:
     i += 1
 
     print i, 'of', len(words), ':',
+
+    if len(word) == 1:
+        continue
 
     try:
         leo_word, translate = lingualeo.get_translates(word)
@@ -66,7 +69,7 @@ for word in words:
 
         result = result + word
 
-        print result, translate['translate_id'], 
+        print result, translate['translate_id']
 
     except KeyboardInterrupt:
         break;

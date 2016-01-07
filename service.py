@@ -10,6 +10,9 @@ import codecs, simplejson, pickle, os
 
 from cookielib import CookieJar
 
+from peewee import *
+import os, sys, datetime
+
 import logging
 
 def turn_on_requests_debugging():
@@ -35,10 +38,32 @@ def turn_on_requests_debugging():
 
 #turn_on_requests_debugging()
 
-class LoadedCache:
-    caches = {}
 
-def cache_get(fname, key):
+
+os.environ.setdefault('db_root', '.')
+
+db = SqliteDatabase(os.environ['db_root'] + '/cache_database.db', threadlocals=True)
+
+class BaseModel(Model):
+    class Meta:
+        database = db
+
+class CacheRecord(BaseModel):
+    created_date = DateTimeField(default=datetime.datetime.now, index=True)
+    last_changed = DateTimeField(default=datetime.datetime.now, index=True)
+    last_access = DateTimeField(default=datetime.datetime.now, index=True)
+
+    key = CharField(null=False, default=None, index=True, unique=True)
+    value = TextField(null=True, default=None)
+
+db.connect()
+try:
+    db.create_tables([CacheRecord, ])
+except:
+    pass
+
+
+def fs_cache_get(fname, key):
     if not os.path.exists(fname):
         return None
     #if fname in LoadedCache.caches:
@@ -49,7 +74,7 @@ def cache_get(fname, key):
         LoadedCache.caches[fname] = cache
     return cache.get(key, None)
 
-def cache_set(fname, key, value):
+def fs_cache_set(fname, key, value):
     if os.path.exists(fname):
         with codecs.open(fname, 'r', ) as f:
             cache = pickle.load(f)
@@ -59,6 +84,21 @@ def cache_set(fname, key, value):
     s = pickle.dumps(cache, ) #ensure_ascii=False
     with codecs.open(fname, 'w', ) as f:
         f.write(s)
+
+def db_cache_get(fname, key):
+    key = fname + ":" + key
+    for cacheRecord in CacheRecord.select().where(CacheRecord.key == key):
+        return json.loads(cacheRecord.value)
+    return None
+
+def db_cache_set(fname, key, value):
+    key = fname + ":" + key
+    cacheRecord, created = CacheRecord.create_or_get(key = key)
+    cacheRecord.value = json.dumps(value)
+    cacheRecord.save()
+
+cache_get = db_cache_get
+cache_set = db_cache_set
 
 class Lingualeo:
     def __init__(self, email, password):
