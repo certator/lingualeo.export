@@ -11,7 +11,7 @@ import codecs, simplejson, pickle, os
 from cookielib import CookieJar
 
 from peewee import *
-import os, sys, datetime
+import os, sys, datetime, copy
 
 import logging
 
@@ -101,6 +101,19 @@ cache_get = db_cache_get
 cache_set = db_cache_set
 
 class Lingualeo:
+
+    headers = {
+        'User-Agent' :'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0' ,
+        'Accept' :'*/*' ,
+        'Accept-Language' :'en-US,en;q=0.5' ,
+        'Content-Type' :'application/x-www-form-urlencoded; charset=UTF-8' ,
+        'X-Requested-With' :'XMLHttpRequest' ,
+        'Connection' :'keep-alive' ,
+        'Pragma' :'no-cache' ,
+        'Cache-Control' :'no-cache' ,
+    }
+
+
     def __init__(self, email, password):
         self.email = email
         self.password = password
@@ -154,21 +167,12 @@ class Lingualeo:
 
             if not groupId is None:
                 values.update({"groupId": str(groupId)})
-            headers = {
-                'User-Agent' :'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0' ,
-                'Accept' :'*/*' ,
-                'Accept-Language' :'en-US,en;q=0.5' ,
-                'Content-Type' :'application/x-www-form-urlencoded; charset=UTF-8' ,
-                'X-Requested-With' :'XMLHttpRequest' ,
-                'Referer' :'https://lingualeo.com/ru/glossary/learn/' + str(groupId) ,
-                'Connection' :'keep-alive' ,
-                'Pragma' :'no-cache' ,
-                'Cache-Control' :'no-cache' ,
-            }
 
             #print '>>', values
-            #print '>', self.get_content2(url, values, headers=headers), '<'   
-            r = self.get_content2(url, values, headers=headers)  
+            #print '>', self.get_content2(url, values, headers=headers), '<'  
+            headers =  copy.deepcopy(self.headers)
+            headers['Referer'] = 'https://lingualeo.com/ru/glossary/learn/' + str(groupId) 
+            r = self.get_content2(url, values, headers=self.headers)  
             if r['error_msg'] != '':
                 raise Exception(r['error_msg'])
 
@@ -206,7 +210,49 @@ class Lingualeo:
             "word_id": result["userdict3"]['word_id'],
             "translate_id": translate["translate_id"],
             'speech_part_id': translate["speech_part_id"],
-        }
+        }   
+
+
+    def query_user_dict(self, query, referer):
+        url = "https://lingualeo.com/userdict/json"
+        params = copy.deepcopy(query)
+        page = 1
+
+        words = []
+
+        headers =  copy.deepcopy(self.headers)
+        headers['Referer'] = referer
+
+
+        while True:
+            params['page'] = str(page)
+            r = self.get_content2(url, params, headers=headers)  
+            if r['error_msg'] != '':
+                raise Exception(r['error_msg'])
+            if len(r['userdict3']) == 0:
+                break
+            for date_range in r['userdict3']:
+                words += date_range['words']
+            page += 1
+        return words
+    
+    def get_learned_words(self):     
+        return self.query_user_dict({
+                'sortBy': 'date',
+                'wordType': '0',
+                'filter': 'learned',
+                'groupId': 'dictionary',
+            }, 'https://lingualeo.com/ru/glossary/learn/dictionary')
+
+    def get_user_dict_words(self, groupId):     
+        return self.query_user_dict({
+                'sortBy': 'date',
+                'wordType': '0',
+                'filter': 'all',
+                'groupId': str(groupId),
+            }, 'https://lingualeo.com/ru/glossary/learn/' + str(groupId))
+
+
 
     last_rq = time.time()
     throttle = 0.5
